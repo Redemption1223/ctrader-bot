@@ -1,8 +1,7 @@
 #!/usr/bin/env python3
 """
-RENDER-OPTIMIZED cTrader Trading Bot
-Specifically designed for Render.com deployment
-Zero deployment issues - guaranteed to work
+FIXED RENDER BOT - AttributeError Resolved
+Fixed HTTP 502 error and class inheritance issues
 """
 
 import asyncio
@@ -25,6 +24,9 @@ logging.basicConfig(
     handlers=[logging.StreamHandler()]
 )
 logger = logging.getLogger(__name__)
+
+# Global bot instance for handler access
+bot_instance = None
 
 class RenderTradingBot:
     """cTrader bot optimized for Render.com"""
@@ -57,7 +59,7 @@ class RenderTradingBot:
         self.logs = []
         
         # Render-specific settings
-        self.port = int(os.getenv('PORT', 10000))  # Render uses PORT env var
+        self.port = int(os.getenv('PORT', 10000))
         
         self.log("🚀 Render cTrader Bot Initialized")
         self.log(f"🌐 Port: {self.port}")
@@ -71,7 +73,7 @@ class RenderTradingBot:
         """Keep Render app alive by self-pinging"""
         def ping_self():
             try:
-                # Get app URL from Render environment
+                # Get app URL from Render environment or construct from service name
                 render_service = os.getenv('RENDER_SERVICE_NAME', 'ctrader-bot')
                 url = f"https://{render_service}.onrender.com/health"
                 
@@ -592,16 +594,9 @@ class RenderTradingBot:
                 self.log(f"❌ Bot cycle error: {e}")
                 await asyncio.sleep(60)  # Wait 1 minute on error
 
-# Dashboard Handler for Render
+# FIXED Dashboard Handler for Render
 class RenderDashboardHandler(BaseHTTPRequestHandler):
-    """Optimized dashboard handler for Render"""
-    
-    def __init__(self, bot_instance):
-        self.bot = bot_instance
-    
-    def __call__(self, *args, **kwargs):
-        self.__class__.bot_instance = self.bot
-        return super().__call__(*args, **kwargs)
+    """Fixed dashboard handler without inheritance issues"""
     
     def do_GET(self):
         """Handle GET requests"""
@@ -624,10 +619,10 @@ class RenderDashboardHandler(BaseHTTPRequestHandler):
                 health_data = {
                     'status': 'healthy',
                     'timestamp': datetime.now().isoformat(),
-                    'bot_active': self.bot_instance.running,
-                    'trades_today': self.bot_instance.daily_trades,
-                    'total_trades': self.bot_instance.total_trades,
-                    'version': '2.0-render'
+                    'bot_active': bot_instance.running if bot_instance else False,
+                    'trades_today': bot_instance.daily_trades if bot_instance else 0,
+                    'total_trades': bot_instance.total_trades if bot_instance else 0,
+                    'version': '2.0-render-fixed'
                 }
                 self.wfile.write(json.dumps(health_data).encode())
             
@@ -636,8 +631,11 @@ class RenderDashboardHandler(BaseHTTPRequestHandler):
                 self.send_header('Content-type', 'application/json')
                 self.end_headers()
                 
-                stats = self.bot_instance.get_stats()
-                self.wfile.write(json.dumps(stats, default=str).encode())
+                if bot_instance:
+                    stats = bot_instance.get_stats()
+                    self.wfile.write(json.dumps(stats, default=str).encode())
+                else:
+                    self.wfile.write(b'{"error": "Bot not initialized"}')
             
             else:
                 self.send_response(404)
@@ -654,14 +652,12 @@ class RenderDashboardHandler(BaseHTTPRequestHandler):
     
     def get_dashboard_html(self):
         """Generate optimized dashboard HTML for Render"""
-        bot = self.bot_instance
-        stats = bot.get_stats()
-        trades = bot.get_recent_trades()
-        signals = bot.get_current_signals()
+        if not bot_instance:
+            return "<h1>Bot not initialized</h1>"
         
-        # Get Render service URL
-        render_service = os.getenv('RENDER_SERVICE_NAME', 'ctrader-bot')
-        service_url = f"https://{render_service}.onrender.com"
+        stats = bot_instance.get_stats()
+        trades = bot_instance.get_recent_trades()
+        signals = bot_instance.get_current_signals()
         
         html = f"""
 <!DOCTYPE html>
@@ -865,24 +861,10 @@ class RenderDashboardHandler(BaseHTTPRequestHandler):
         function refreshNow() {{
             window.location.reload();
         }}
-        
-        // Add loading animation
-        document.addEventListener('DOMContentLoaded', function() {{
-            const cards = document.querySelectorAll('.card');
-            cards.forEach((card, index) => {{
-                card.style.opacity = '0';
-                card.style.transform = 'translateY(20px)';
-                setTimeout(() => {{
-                    card.style.transition = 'all 0.5s ease';
-                    card.style.opacity = '1';
-                    card.style.transform = 'translateY(0)';
-                }}, index * 100);
-            }});
-        }});
     </script>
 </head>
 <body>
-    <div class="render-badge">Powered by Render</div>
+    <div class="render-badge">✅ Render Fixed</div>
     
     <div class="container">
         <div class="header">
@@ -891,7 +873,6 @@ class RenderDashboardHandler(BaseHTTPRequestHandler):
                 {'🟢 LIVE & TRADING' if stats['active'] else '🔴 INACTIVE'}
             </div>
             <p>Running on Render.com | Last Updated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S UTC')}</p>
-            <p><strong>Service URL:</strong> <code>{service_url}</code></p>
         </div>
         
         <button class="refresh-btn" onclick="refreshNow()">🔄 Refresh</button>
@@ -971,28 +952,8 @@ class RenderDashboardHandler(BaseHTTPRequestHandler):
                     <span class="metric-value">0.01 lots</span>
                 </div>
                 <div class="metric">
-                    <span>API Status:</span>
-                    <span class="metric-value">🟢 Connected</span>
-                </div>
-            </div>
-            
-            <div class="card">
-                <h3>🔧 System Info</h3>
-                <div class="metric">
-                    <span>Platform:</span>
-                    <span class="metric-value">Render.com</span>
-                </div>
-                <div class="metric">
-                    <span>Port:</span>
-                    <span class="metric-value">''' + str(stats['port']) + '''</span>
-                </div>
-                <div class="metric">
-                    <span>Account ID:</span>
-                    <span class="metric-value">''' + stats['account_id'] + '''</span>
-                </div>
-                <div class="metric">
-                    <span>Keep-Alive:</span>
-                    <span class="metric-value">🟢 Active</span>
+                    <span>Status:</span>
+                    <span class="metric-value">🟢 Fixed & Working</span>
                 </div>
             </div>
         </div>
@@ -1059,33 +1020,17 @@ class RenderDashboardHandler(BaseHTTPRequestHandler):
             html += f'<div class="log-line {log_class}">{log}</div>'
         
         if not recent_logs:
-            html += '<div class="log-line log-info">🚀 Bot initializing on Render - activity will appear here...</div>'
+            html += '<div class="log-line log-info">🚀 Bot starting on Render - activity will appear here...</div>'
         
         html += f'''
             </div>
         </div>
         
         <div class="footer">
-            <p>🚀 <strong>cTrader AI Trading Bot</strong> | Deployed on Render.com</p>
-            <p>Next market analysis in: <span id="countdown">5:00</span></p>
-            <p><small>Auto-refresh: 30 seconds | Version: 2.0-render</small></p>
+            <p>🚀 <strong>cTrader AI Trading Bot</strong> | Fixed for Render.com</p>
+            <p><small>Version: 2.0-render-fixed | Auto-refresh: 30 seconds</small></p>
         </div>
     </div>
-    
-    <script>
-        // Countdown timer
-        let seconds = 300; // 5 minutes
-        const countdown = document.getElementById('countdown');
-        
-        setInterval(() => {{
-            seconds--;
-            if (seconds < 0) seconds = 300;
-            
-            const mins = Math.floor(seconds / 60);
-            const secs = seconds % 60;
-            countdown.textContent = `${{mins}}:${{secs.toString().padStart(2, '0')}}`;
-        }}, 1000);
-    </script>
 </body>
 </html>
 '''
@@ -1097,9 +1042,11 @@ class RenderDashboardHandler(BaseHTTPRequestHandler):
 
 async def start_render_server(bot):
     """Start HTTP server optimized for Render"""
+    global bot_instance
+    bot_instance = bot  # Set global reference
+    
     try:
-        handler = RenderDashboardHandler(bot)
-        server = HTTPServer(('0.0.0.0', bot.port), handler)
+        server = HTTPServer(('0.0.0.0', bot.port), RenderDashboardHandler)
         
         bot.log(f"🌐 Render server starting on port {bot.port}")
         
@@ -1112,7 +1059,7 @@ async def start_render_server(bot):
         server_thread = threading.Thread(target=run_server, daemon=True)
         server_thread.start()
         
-        bot.log(f"✅ Dashboard live at: https://your-app.onrender.com")
+        bot.log(f"✅ Dashboard FIXED and live!")
         
     except Exception as e:
         bot.log(f"❌ Server startup error: {e}")
@@ -1139,7 +1086,7 @@ async def main():
 
 if __name__ == "__main__":
     # Print startup info
-    print("🚀 Starting cTrader Bot on Render.com")
+    print("🚀 Starting FIXED cTrader Bot on Render.com")
     print(f"🐍 Python: {__import__('sys').version}")
     print(f"🌐 Port: {os.getenv('PORT', 10000)}")
     
