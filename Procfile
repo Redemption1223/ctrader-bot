@@ -1,1 +1,1 @@
-web: python ai_trading_engine.py
+web: gunicorn app:app
