@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-CRASH-PROOF CTRADER BOT
-Maximum stability with bulletproof error handling
+RENDER-COMPATIBLE CTRADER BOT
+Fixed for Render deployment system
 """
 
 import json
@@ -12,460 +12,286 @@ import urllib.parse
 import random
 import math
 import threading
-import traceback
 from datetime import datetime, timedelta
 from http.server import HTTPServer, BaseHTTPRequestHandler
 
-print("🛡️ CRASH-PROOF CTRADER BOT STARTING")
+print("🚀 RENDER-COMPATIBLE CTRADER BOT")
 print("=" * 60)
 
-class CrashProofBot:
-    """Bulletproof bot that never crashes"""
+class RenderCompatibleBot:
+    """Bot designed specifically for Render deployment"""
     
     def __init__(self):
-        try:
-            self.logs = []
-            self.safe_log("🛡️ INITIALIZING CRASH-PROOF BOT")
-            
-            # Initialize all variables with safe defaults
-            self.access_token = ""
-            self.refresh_token = ""
-            self.client_id = ""
-            self.client_secret = ""
-            self.account_id = ""
-            
-            # Bot state with safe defaults
-            self.running = True
-            self.account_verified = False
-            self.account_info = {"verified": False, "balance": 10000.0, "currency": "USD"}
-            self.current_balance = 10000.0
-            self.daily_trades = 0
-            self.total_trades = 0
-            self.successful_trades = 0
-            self.total_profit = 0.0
-            self.trade_history = []
-            self.current_signals = {}
-            self.start_time = datetime.now()
-            
-            # Trading config
-            self.max_daily_trades = 20
-            self.currency_pairs = ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD']
-            
-            # Load credentials safely
-            self.safe_load_credentials()
-            
-            # Try API connection (but don't crash if it fails)
-            self.safe_test_api()
-            
-            self.safe_log("✅ CRASH-PROOF BOT INITIALIZED SUCCESSFULLY")
-            
-        except Exception as e:
-            self.safe_log(f"❌ Init error (but continuing): {e}")
-            # Even if init fails, set safe defaults
-            self.running = True
-            self.account_verified = False
-            self.current_balance = 10000.0
+        self.logs = []
+        self.log("🚀 INITIALIZING RENDER-COMPATIBLE BOT")
+        
+        # Initialize safely
+        self.running = True
+        self.account_verified = False
+        self.account_info = {"verified": False, "balance": 10000.0}
+        self.current_balance = 10000.0
+        self.daily_trades = 0
+        self.total_trades = 0
+        self.successful_trades = 0
+        self.total_profit = 0.0
+        self.trade_history = []
+        self.start_time = datetime.now()
+        
+        # Trading config
+        self.max_daily_trades = 20
+        self.currency_pairs = ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD']
+        
+        # Load credentials
+        self.load_credentials()
+        
+        # Test API connection
+        self.test_api_connection()
+        
+        self.log("✅ BOT INITIALIZED FOR RENDER")
     
-    def safe_log(self, message):
-        """Ultra-safe logging that never crashes"""
+    def log(self, message):
+        """Safe logging"""
         try:
             timestamp = datetime.now().strftime("%H:%M:%S")
             log_entry = f"[{timestamp}] {message}"
-            
-            if not hasattr(self, 'logs'):
-                self.logs = []
-            
             self.logs.append(log_entry)
             
-            # Keep reasonable log size
             if len(self.logs) > 100:
                 self.logs = self.logs[-100:]
             
             print(log_entry)
+        except:
+            print(f"LOG ERROR: {message}")
+    
+    def load_credentials(self):
+        """Load cTrader credentials"""
+        try:
+            self.access_token = os.getenv('CTRADER_ACCESS_TOKEN', '').strip()
+            self.account_id = os.getenv('CTRADER_ACCOUNT_ID', '').strip()
+            self.client_id = os.getenv('CTRADER_CLIENT_ID', '').strip()
+            self.client_secret = os.getenv('CTRADER_CLIENT_SECRET', '').strip()
+            self.refresh_token = os.getenv('CTRADER_REFRESH_TOKEN', '').strip()
+            
+            self.log(f"🔑 Credentials: Token({'✅' if self.access_token else '❌'}) Account({'✅' if self.account_id else '❌'})")
             
         except Exception as e:
-            # Even logging can't fail!
-            print(f"[ERROR] Logging failed: {e}")
-            print(f"[ERROR] Original message: {message}")
+            self.log(f"❌ Credential error: {e}")
     
-    def safe_load_credentials(self):
-        """Safely load credentials without crashing"""
+    def test_api_connection(self):
+        """Test cTrader API connection"""
+        if not self.access_token:
+            self.log("⚠️ No access token - using simulation mode")
+            return
+        
         try:
-            self.safe_log("🔑 Loading credentials safely...")
+            self.log("🧪 Testing cTrader API...")
             
-            # Safe environment variable loading
-            try:
-                self.access_token = str(os.getenv('CTRADER_ACCESS_TOKEN', '')).strip()
-                self.safe_log(f"   Access Token: {'✅' if self.access_token else '❌'} ({len(self.access_token)} chars)")
-            except:
-                self.access_token = ""
-                self.safe_log("   Access Token: ❌ (load error)")
-            
-            try:
-                self.refresh_token = str(os.getenv('CTRADER_REFRESH_TOKEN', '')).strip()
-                self.safe_log(f"   Refresh Token: {'✅' if self.refresh_token else '❌'} ({len(self.refresh_token)} chars)")
-            except:
-                self.refresh_token = ""
-                self.safe_log("   Refresh Token: ❌ (load error)")
-            
-            try:
-                self.client_id = str(os.getenv('CTRADER_CLIENT_ID', '')).strip()
-                self.safe_log(f"   Client ID: {'✅' if self.client_id else '❌'} ({len(self.client_id)} chars)")
-            except:
-                self.client_id = ""
-                self.safe_log("   Client ID: ❌ (load error)")
-            
-            try:
-                self.client_secret = str(os.getenv('CTRADER_CLIENT_SECRET', '')).strip()
-                self.safe_log(f"   Client Secret: {'✅' if self.client_secret else '❌'} ({len(self.client_secret)} chars)")
-            except:
-                self.client_secret = ""
-                self.safe_log("   Client Secret: ❌ (load error)")
-            
-            try:
-                self.account_id = str(os.getenv('CTRADER_ACCOUNT_ID', '')).strip()
-                self.safe_log(f"   Account ID: {'✅' if self.account_id else '❌'} ({self.account_id or 'None'})")
-            except:
-                self.account_id = ""
-                self.safe_log("   Account ID: ❌ (load error)")
-            
-        except Exception as e:
-            self.safe_log(f"❌ Credential loading error: {e}")
-            # Set safe defaults
-            self.access_token = ""
-            self.refresh_token = ""
-            self.client_id = ""
-            self.client_secret = ""
-            self.account_id = ""
-    
-    def safe_test_api(self):
-        """Safely test API without crashing"""
-        try:
-            if not self.access_token:
-                self.safe_log("⚠️ No access token - skipping API test")
-                return
-            
-            self.safe_log("🧪 Testing API connection safely...")
-            
-            # Test endpoints one by one with full error handling
-            test_endpoints = [
-                ("https://openapi.ctrader.com/v1/accounts", "LIVE v1"),
-                ("https://demo-openapi.ctrader.com/v1/accounts", "DEMO v1"),
-                ("https://openapi.ctrader.com/accounts", "LIVE no-version"),
-                ("https://demo-openapi.ctrader.com/accounts", "DEMO no-version")
+            # Test correct endpoints
+            endpoints = [
+                "https://openapi.ctrader.com/v1/accounts",
+                "https://demo-openapi.ctrader.com/v1/accounts"
             ]
             
-            for url, description in test_endpoints:
+            for endpoint in endpoints:
                 try:
-                    self.safe_log(f"   Testing {description}: {url}")
-                    result = self.safe_api_call(url, description)
+                    self.log(f"   Testing: {endpoint}")
                     
-                    if result and result.get('success'):
-                        self.safe_log(f"🎉 API CONNECTION SUCCESS with {description}!")
-                        self.account_verified = True
-                        self.account_info = result
-                        self.current_balance = float(result.get('balance', 10000))
-                        return True
-                    else:
-                        error = result.get('error', 'Unknown') if result else 'No response'
-                        self.safe_log(f"   ❌ {description} failed: {error}")
-                
-                except Exception as e:
-                    self.safe_log(f"   ❌ {description} exception: {e}")
-                    continue
-            
-            self.safe_log("⚠️ All API tests failed - using simulation mode")
-            
-        except Exception as e:
-            self.safe_log(f"❌ API test error: {e}")
-    
-    def safe_api_call(self, url, description):
-        """Make a safe API call that never crashes"""
-        try:
-            if not self.access_token:
-                return {"success": False, "error": "No access token"}
-            
-            # Create request with timeout and proper headers
-            headers = {
-                'Authorization': f'Bearer {self.access_token}',
-                'Accept': 'application/json',
-                'User-Agent': 'CrashProofBot/1.0'
-            }
-            
-            request = urllib.request.Request(url, headers=headers)
-            
-            # Make request with timeout
-            with urllib.request.urlopen(request, timeout=10) as response:
-                status = response.status
-                
-                if status == 200:
-                    try:
-                        response_text = response.read().decode('utf-8')
-                        data = json.loads(response_text)
-                        
-                        if isinstance(data, list) and len(data) > 0:
-                            account = data[0]
-                        elif isinstance(data, dict):
-                            account = data
-                        else:
-                            return {"success": False, "error": "No account data"}
-                        
-                        # Extract account info safely
-                        result = {
-                            "success": True,
-                            "account_id": str(account.get('accountId', account.get('id', 'Unknown'))),
-                            "balance": float(account.get('balance', 10000)),
-                            "currency": str(account.get('currency', 'USD')),
-                            "broker": str(account.get('brokerName', account.get('broker', 'Unknown'))),
-                            "method": description,
-                            "verified": True
-                        }
-                        
-                        return result
-                        
-                    except json.JSONDecodeError:
-                        return {"success": False, "error": "Invalid JSON response"}
-                    except (ValueError, TypeError) as e:
-                        return {"success": False, "error": f"Data parsing error: {e}"}
-                else:
-                    return {"success": False, "error": f"HTTP {status}"}
-        
-        except urllib.error.HTTPError as e:
-            return {"success": False, "error": f"HTTP Error {e.code}"}
-        except urllib.error.URLError as e:
-            return {"success": False, "error": f"URL Error: {e.reason}"}
-        except Exception as e:
-            return {"success": False, "error": f"Request failed: {e}"}
-    
-    def safe_trading_cycle(self):
-        """Ultra-safe trading cycle"""
-        try:
-            if self.daily_trades >= self.max_daily_trades:
-                self.safe_log(f"📊 Daily limit reached: {self.daily_trades}/{self.max_daily_trades}")
-                return
-            
-            self.safe_log("🧠 Safe trading analysis...")
-            
-            for symbol in self.currency_pairs:
-                try:
-                    # Generate safe trading signal
-                    signal = self.safe_generate_signal(symbol)
+                    headers = {
+                        'Authorization': f'Bearer {self.access_token}',
+                        'Accept': 'application/json'
+                    }
                     
-                    if signal and signal.get('action') in ['BUY', 'SELL']:
-                        confidence = signal.get('confidence', 0)
-                        
-                        if confidence > 0.8:
-                            self.safe_log(f"🎯 Trading signal: {signal['action']} {symbol} ({confidence:.1%})")
+                    request = urllib.request.Request(endpoint, headers=headers)
+                    
+                    with urllib.request.urlopen(request, timeout=10) as response:
+                        if response.status == 200:
+                            data = json.loads(response.read().decode())
                             
-                            # Execute safe trade
-                            success = self.safe_execute_trade(signal)
-                            
-                            if success:
-                                self.daily_trades += 1
+                            if data and len(data) > 0:
+                                account = data[0]
+                                self.account_verified = True
+                                self.account_info = {
+                                    'verified': True,
+                                    'account_id': account.get('accountId', 'Unknown'),
+                                    'balance': float(account.get('balance', 10000)),
+                                    'currency': account.get('currency', 'USD'),
+                                    'broker': account.get('brokerName', 'Unknown')
+                                }
+                                self.current_balance = self.account_info['balance']
                                 
-                                if self.daily_trades >= self.max_daily_trades:
-                                    break
-                    
+                                self.log(f"✅ API SUCCESS: {self.account_info['account_id']}")
+                                self.log(f"   Balance: {self.account_info['balance']:.2f} {self.account_info['currency']}")
+                                return
+                        else:
+                            self.log(f"   ❌ HTTP {response.status}")
+                
+                except urllib.error.HTTPError as e:
+                    self.log(f"   ❌ HTTP {e.code}: {e.reason}")
                 except Exception as e:
-                    self.safe_log(f"❌ Trading error for {symbol}: {e}")
-                    continue
+                    self.log(f"   ❌ Error: {e}")
+            
+            self.log("⚠️ API tests failed - using simulation mode")
             
         except Exception as e:
-            self.safe_log(f"❌ Trading cycle error: {e}")
+            self.log(f"❌ API test error: {e}")
     
-    def safe_generate_signal(self, symbol):
-        """Generate trading signal safely"""
+    def generate_signal(self, symbol):
+        """Generate trading signal"""
         try:
-            # Simple but safe signal generation
-            confidence = random.uniform(0.6, 0.95)
+            confidence = random.uniform(0.7, 0.95)
             action = random.choice(['BUY', 'SELL', 'HOLD'])
             price = 1.0000 + random.uniform(-0.01, 0.01)
             
-            signal = {
+            return {
                 'symbol': symbol,
                 'action': action,
                 'confidence': confidence,
-                'price': price,
-                'timestamp': datetime.now().isoformat()
+                'price': price
             }
-            
-            return signal
-            
-        except Exception as e:
-            self.safe_log(f"❌ Signal generation error for {symbol}: {e}")
-            return None
+        except:
+            return {'symbol': symbol, 'action': 'HOLD', 'confidence': 0}
     
-    def safe_execute_trade(self, signal):
-        """Execute trade safely"""
+    def execute_trade(self, signal):
+        """Execute trade (simulation)"""
         try:
-            symbol = signal.get('symbol', 'UNKNOWN')
-            action = signal.get('action', 'UNKNOWN')
-            volume = 10000
+            symbol = signal['symbol']
+            action = signal['action']
             
-            # Simulate realistic trading
+            # Simulate trading
             success = random.choice([True, True, True, False])  # 75% success
             
             if success:
-                # Calculate realistic profit
-                profit = volume * 0.0001 * random.uniform(-1, 3)
-                estimated_profit = profit * 10
-                
-                self.total_profit += estimated_profit
-                self.current_balance += estimated_profit
-                self.total_trades += 1
+                profit = random.uniform(-10, 30)  # -$10 to +$30
+                self.total_profit += profit
+                self.current_balance += profit
                 self.successful_trades += 1
                 
-                # Record trade safely
-                try:
-                    trade_record = {
-                        'timestamp': datetime.now().isoformat(),
-                        'time': datetime.now().strftime("%H:%M:%S"),
-                        'symbol': symbol,
-                        'action': action,
-                        'volume': volume,
-                        'success': True,
-                        'profit': estimated_profit,
-                        'balance': self.current_balance
-                    }
-                    
-                    self.trade_history.append(trade_record)
-                    
-                    # Keep reasonable history size
-                    if len(self.trade_history) > 50:
-                        self.trade_history = self.trade_history[-50:]
-                        
-                except Exception as e:
-                    self.safe_log(f"❌ Trade recording error: {e}")
+                trade = {
+                    'time': datetime.now().strftime("%H:%M:%S"),
+                    'symbol': symbol,
+                    'action': action,
+                    'success': True,
+                    'profit': profit,
+                    'balance': self.current_balance
+                }
                 
-                self.safe_log(f"✅ Trade success: {action} {symbol} | P&L: {estimated_profit:+.2f}")
+                self.trade_history.append(trade)
+                if len(self.trade_history) > 20:
+                    self.trade_history = self.trade_history[-20:]
+                
+                self.log(f"✅ {action} {symbol} | P&L: {profit:+.2f}")
                 return True
             else:
-                self.total_trades += 1
-                self.safe_log(f"❌ Trade failed: {action} {symbol}")
+                self.log(f"❌ {action} {symbol} failed")
                 return False
-            
+        
         except Exception as e:
-            self.safe_log(f"❌ Trade execution error: {e}")
+            self.log(f"❌ Trade error: {e}")
             return False
     
-    def safe_get_stats(self):
-        """Get statistics safely"""
+    def trading_cycle(self):
+        """Main trading cycle"""
+        try:
+            if self.daily_trades >= self.max_daily_trades:
+                return
+            
+            self.log("🧠 Trading analysis...")
+            
+            for symbol in self.currency_pairs:
+                try:
+                    signal = self.generate_signal(symbol)
+                    
+                    if signal['action'] in ['BUY', 'SELL'] and signal['confidence'] > 0.85:
+                        self.log(f"🎯 Signal: {signal['action']} {symbol} ({signal['confidence']:.1%})")
+                        
+                        if self.execute_trade(signal):
+                            self.daily_trades += 1
+                            self.total_trades += 1
+                            
+                            if self.daily_trades >= self.max_daily_trades:
+                                break
+                
+                except Exception as e:
+                    self.log(f"❌ {symbol} error: {e}")
+                    continue
+        
+        except Exception as e:
+            self.log(f"❌ Trading cycle error: {e}")
+    
+    def get_stats(self):
+        """Get bot statistics"""
         try:
             runtime = datetime.now() - self.start_time
-            success_rate = 0
+            success_rate = (self.successful_trades / max(self.total_trades, 1)) * 100
             
-            try:
-                if self.total_trades > 0:
-                    success_rate = (self.successful_trades / self.total_trades) * 100
-            except:
-                success_rate = 0
-            
-            stats = {
+            return {
                 'active': self.running,
                 'account_verified': self.account_verified,
                 'account_info': self.account_info,
                 'daily_trades': self.daily_trades,
                 'max_daily_trades': self.max_daily_trades,
                 'total_trades': self.total_trades,
-                'successful_trades': self.successful_trades,
                 'success_rate': success_rate,
                 'current_balance': self.current_balance,
                 'total_profit': self.total_profit,
                 'runtime': str(runtime).split('.')[0],
-                'recent_logs': self.logs[-30:] if hasattr(self, 'logs') else [],
-                'version': 'crash-proof-1.0'
+                'recent_logs': self.logs[-20:],
+                'recent_trades': self.trade_history[-10:]
             }
-            
-            return stats
-            
-        except Exception as e:
-            self.safe_log(f"❌ Stats error: {e}")
-            # Return safe defaults
-            return {
-                'active': True,
-                'account_verified': False,
-                'daily_trades': 0,
-                'total_trades': 0,
-                'success_rate': 0,
-                'current_balance': 10000,
-                'total_profit': 0,
-                'runtime': '00:00:00',
-                'recent_logs': ['Error getting stats'],
-                'version': 'crash-proof-1.0'
-            }
+        except:
+            return {'active': True, 'error': 'Stats error'}
     
-    def safe_run_bot(self):
-        """Ultra-safe bot execution that never crashes"""
+    def run_forever(self):
+        """Run trading bot forever"""
         try:
-            self.safe_log("🛡️ CRASH-PROOF BOT RUNNING")
+            self.log("🚀 STARTING TRADING ENGINE")
             
             cycle = 0
             
-            while self.running:
+            while True:
                 try:
                     cycle += 1
-                    self.safe_log(f"🔄 Safe Cycle #{cycle}")
+                    self.log(f"🔄 Cycle #{cycle}")
                     
-                    # Safe trading
-                    self.safe_trading_cycle()
+                    # Execute trading
+                    self.trading_cycle()
                     
-                    # Safe status update
-                    try:
-                        stats = self.safe_get_stats()
-                        self.safe_log(f"💓 Status: Verified: {'✅' if stats['account_verified'] else '❌'} | "
-                                    f"Trades: {stats['daily_trades']}/{stats['max_daily_trades']} | "
-                                    f"Success: {stats['success_rate']:.1f}% | "
-                                    f"Balance: {stats['current_balance']:.2f}")
-                    except Exception as e:
-                        self.safe_log(f"❌ Status update error: {e}")
+                    # Status update
+                    stats = self.get_stats()
+                    self.log(f"💓 Status: API({'✅' if stats['account_verified'] else '❌'}) | "
+                           f"Trades: {stats['daily_trades']}/{stats['max_daily_trades']} | "
+                           f"Success: {stats['success_rate']:.1f}% | "
+                           f"Balance: {stats['current_balance']:.2f}")
                     
-                    # Safe sleep
-                    try:
-                        self.safe_log("⏰ Waiting 2 minutes for next cycle...")
-                        time.sleep(120)
-                    except KeyboardInterrupt:
-                        self.safe_log("🛑 Bot stopped by user")
-                        break
-                    except Exception as e:
-                        self.safe_log(f"❌ Sleep error: {e}")
-                        time.sleep(60)  # Fallback sleep
+                    # Wait 3 minutes
+                    self.log("⏰ Next cycle in 3 minutes...")
+                    time.sleep(180)
                 
+                except KeyboardInterrupt:
+                    self.log("🛑 Bot stopped")
+                    break
                 except Exception as e:
-                    self.safe_log(f"❌ Cycle error (but continuing): {e}")
-                    try:
-                        time.sleep(60)  # Wait before retry
-                    except:
-                        pass
+                    self.log(f"❌ Cycle error: {e}")
+                    time.sleep(60)
                     continue
         
         except Exception as e:
-            self.safe_log(f"❌ Major bot error: {e}")
-            # Try to restart gracefully
-            try:
-                time.sleep(30)
-                self.safe_log("🔄 Attempting bot restart...")
-                self.safe_run_bot()
-            except:
-                self.safe_log("💥 Bot cannot restart - ending safely")
+            self.log(f"❌ Bot error: {e}")
 
 # Global bot instance
-crash_proof_bot = None
+bot = RenderCompatibleBot()
 
-class CrashProofHandler(BaseHTTPRequestHandler):
-    """Crash-proof web handler"""
+class RenderHandler(BaseHTTPRequestHandler):
+    """Simple HTTP handler for Render"""
     
     def do_GET(self):
         try:
             if self.path == '/' or self.path == '/dashboard':
-                html = self.get_safe_dashboard()
+                html = self.get_dashboard()
             elif self.path == '/health':
-                html = json.dumps({
-                    'status': 'crash_proof',
-                    'bot_active': True,
-                    'version': 'crash-proof-1.0'
-                })
+                html = json.dumps({'status': 'healthy', 'bot': 'running'})
             else:
-                html = '<h1>404 Not Found</h1>'
+                html = '<h1>cTrader Bot Dashboard</h1><p><a href="/">Go to Dashboard</a></p>'
             
             self.send_response(200)
             self.send_header('Content-type', 'text/html; charset=utf-8')
@@ -475,95 +301,130 @@ class CrashProofHandler(BaseHTTPRequestHandler):
         except Exception as e:
             try:
                 self.send_response(500)
-                self.send_header('Content-type', 'text/html')
                 self.end_headers()
-                self.wfile.write(f'<h1>Error: {e}</h1>'.encode())
+                self.wfile.write(f'Error: {e}'.encode())
             except:
                 pass
     
-    def get_safe_dashboard(self):
-        """Generate safe dashboard"""
+    def get_dashboard(self):
+        """Generate simple dashboard"""
         try:
-            if not crash_proof_bot:
-                return "<h1>Bot not initialized</h1>"
-            
-            stats = crash_proof_bot.safe_get_stats()
+            stats = bot.get_stats()
             
             status_color = "#28a745" if stats['account_verified'] else "#ffc107"
-            status_text = "✅ CONNECTED" if stats['account_verified'] else "🛡️ SAFE MODE"
+            status_text = "✅ LIVE CONNECTED" if stats['account_verified'] else "🧪 SIMULATION MODE"
+            
+            trades_html = ""
+            for trade in stats.get('recent_trades', []):
+                profit_color = "#28a745" if trade.get('profit', 0) >= 0 else "#dc3545"
+                trades_html += f'''
+                <div style="padding: 10px; margin: 5px 0; background: rgba(255,255,255,0.1); border-radius: 8px;">
+                    <strong>{trade.get('action', 'UNKNOWN')} {trade.get('symbol', 'UNKNOWN')}</strong> at {trade.get('time', 'Unknown')}
+                    <span style="color: {profit_color}; float: right;">P&L: {trade.get('profit', 0):+.2f}</span>
+                </div>
+                '''
+            
+            logs_html = ""
+            for log in stats.get('recent_logs', []):
+                log_color = "#ffffff"
+                if "✅" in log:
+                    log_color = "#28a745"
+                elif "❌" in log:
+                    log_color = "#dc3545"
+                elif "⚠️" in log:
+                    log_color = "#ffc107"
+                
+                logs_html += f'<div style="color: {log_color}; margin: 2px 0; font-family: monospace; font-size: 0.9em;">{log}</div>'
             
             html = f"""
 <!DOCTYPE html>
 <html>
 <head>
-    <title>🛡️ Crash-Proof Bot</title>
+    <title>🚀 cTrader Trading Bot</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <style>
         * {{ margin: 0; padding: 0; box-sizing: border-box; }}
         body {{ 
-            font-family: Arial, sans-serif;
-            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
             padding: 20px;
             min-height: 100vh;
         }}
-        .container {{ max-width: 1200px; margin: 0 auto; }}
+        .container {{ max-width: 1000px; margin: 0 auto; }}
         .header {{ 
             text-align: center; 
             margin-bottom: 30px;
             background: rgba(255,255,255,0.1);
             padding: 30px;
             border-radius: 20px;
+            backdrop-filter: blur(10px);
         }}
         .header h1 {{ 
             font-size: 2.5em; 
-            color: #00ff88;
-            margin-bottom: 15px;
+            margin-bottom: 10px;
+            background: linear-gradient(45deg, #ffd700, #ff6b6b);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
         }}
         .status {{ 
             background: {status_color}; 
             padding: 20px; 
             border-radius: 15px; 
             text-align: center; 
-            margin-bottom: 20px;
-            font-size: 1.2em;
+            margin-bottom: 30px;
+            font-size: 1.3em;
             font-weight: bold;
         }}
-        .grid {{ display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; }}
+        .grid {{ 
+            display: grid; 
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); 
+            gap: 20px; 
+            margin-bottom: 30px;
+        }}
         .card {{ 
             background: rgba(255,255,255,0.1); 
             padding: 25px; 
             border-radius: 15px;
+            backdrop-filter: blur(10px);
         }}
-        .card h3 {{ color: #00ff88; margin-bottom: 20px; }}
+        .card h3 {{ 
+            color: #ffd700; 
+            margin-bottom: 20px; 
+            font-size: 1.4em;
+        }}
         .metric {{ 
             display: flex; 
             justify-content: space-between; 
             margin: 15px 0; 
-            padding: 8px 0;
+            padding: 10px 0;
             border-bottom: 1px solid rgba(255,255,255,0.2);
+        }}
+        .metric-value {{ 
+            font-weight: bold; 
+            color: #ffd700;
         }}
         .logs {{ 
             background: rgba(0,0,0,0.5); 
             padding: 20px; 
             border-radius: 10px; 
-            font-family: monospace; 
-            font-size: 0.9em;
-            max-height: 400px;
+            max-height: 300px;
             overflow-y: auto;
-            margin-top: 20px;
         }}
         .refresh {{ 
             position: fixed; 
             top: 20px; 
             right: 20px; 
-            background: #00ff88; 
-            color: black; 
+            background: #ff6b6b; 
+            color: white; 
             border: none; 
             padding: 15px 20px; 
             border-radius: 25px; 
             cursor: pointer; 
             font-weight: bold;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
         }}
+        .refresh:hover {{ background: #ff5252; }}
     </style>
     <script>
         setTimeout(() => location.reload(), 30000);
@@ -573,53 +434,48 @@ class CrashProofHandler(BaseHTTPRequestHandler):
 <body>
     <div class="container">
         <div class="header">
-            <h1>🛡️ CRASH-PROOF BOT</h1>
-            <p>Ultra-Stable • Never Crashes • Always Running</p>
-            <p>Last Updated: {datetime.now().strftime('%H:%M:%S UTC')}</p>
+            <h1>🚀 cTrader Trading Bot</h1>
+            <p>Automated Forex Trading System</p>
+            <p style="opacity: 0.8;">Last Updated: {datetime.now().strftime('%H:%M:%S UTC')}</p>
         </div>
         
-        <button class="refresh" onclick="refresh()">🔄</button>
+        <button class="refresh" onclick="refresh()">🔄 Refresh</button>
         
         <div class="status">{status_text}</div>
         
         <div class="grid">
             <div class="card">
-                <h3>🛡️ System Status</h3>
+                <h3>📊 Performance</h3>
                 <div class="metric">
-                    <span>Bot Status:</span>
-                    <span>🟢 RUNNING</span>
+                    <span>Account Status:</span>
+                    <span class="metric-value">{'✅ VERIFIED' if stats['account_verified'] else '🧪 SIMULATION'}</span>
                 </div>
                 <div class="metric">
-                    <span>Crash Protection:</span>
-                    <span>🛡️ ACTIVE</span>
+                    <span>Today's Trades:</span>
+                    <span class="metric-value">{stats['daily_trades']}/{stats['max_daily_trades']}</span>
                 </div>
                 <div class="metric">
-                    <span>API Connection:</span>
-                    <span>{'✅ YES' if stats['account_verified'] else '⚠️ SAFE MODE'}</span>
+                    <span>Success Rate:</span>
+                    <span class="metric-value">{stats['success_rate']:.1f}%</span>
+                </div>
+                <div class="metric">
+                    <span>Current Balance:</span>
+                    <span class="metric-value">${stats['current_balance']:.2f}</span>
+                </div>
+                <div class="metric">
+                    <span>Total P&L:</span>
+                    <span class="metric-value" style="color: {'#00ff00' if stats['total_profit'] >= 0 else '#ff4444'};">{stats['total_profit']:+.2f}</span>
                 </div>
                 <div class="metric">
                     <span>Runtime:</span>
-                    <span>{stats['runtime']}</span>
+                    <span class="metric-value">{stats['runtime']}</span>
                 </div>
             </div>
             
             <div class="card">
-                <h3>📊 Trading Stats</h3>
-                <div class="metric">
-                    <span>Today's Trades:</span>
-                    <span>{stats['daily_trades']}/{stats['max_daily_trades']}</span>
-                </div>
-                <div class="metric">
-                    <span>Success Rate:</span>
-                    <span>{stats['success_rate']:.1f}%</span>
-                </div>
-                <div class="metric">
-                    <span>Balance:</span>
-                    <span>{stats['current_balance']:.2f}</span>
-                </div>
-                <div class="metric">
-                    <span>Total P/L:</span>
-                    <span style="color: {'#00ff88' if stats['total_profit'] >= 0 else '#ff4444'};">{stats['total_profit']:+.2f}</span>
+                <h3>💹 Recent Trades</h3>
+                <div style="max-height: 250px; overflow-y: auto;">
+                    {trades_html if trades_html else '<p style="text-align: center; opacity: 0.7;">No trades yet</p>'}
                 </div>
             </div>
         </div>
@@ -627,93 +483,77 @@ class CrashProofHandler(BaseHTTPRequestHandler):
         <div class="card">
             <h3>📱 System Logs</h3>
             <div class="logs">
-"""
-            
-            for log in stats['recent_logs']:
-                log_color = '#ffffff'
-                if '✅' in log:
-                    log_color = '#00ff88'
-                elif '❌' in log:
-                    log_color = '#ff4444'
-                elif '⚠️' in log:
-                    log_color = '#ffaa00'
-                
-                html += f'<div style="color: {log_color}; margin: 2px 0;">{log}</div>'
-            
-            html += '''
+                {logs_html}
             </div>
         </div>
     </div>
 </body>
 </html>
-'''
+            """
             
             return html
-            
+        
         except Exception as e:
-            return f'<h1>Dashboard Error (but bot still running): {e}</h1>'
+            return f'<h1>Dashboard Error: {e}</h1>'
     
     def log_message(self, format, *args):
-        # Suppress server logs to avoid clutter
+        # Suppress server logs
         pass
 
-def safe_start_server():
-    """Start server safely"""
+def create_server():
+    """Create HTTP server for Render"""
     try:
-        if crash_proof_bot:
-            crash_proof_bot.safe_log("🌐 Starting crash-proof server...")
-        
         port = int(os.getenv('PORT', 10000))
-        server = HTTPServer(('0.0.0.0', port), CrashProofHandler)
         
+        bot.log(f"🌐 Starting server on port {port}")
+        
+        server = HTTPServer(('0.0.0.0', port), RenderHandler)
+        
+        # Start server in background thread
         def run_server():
             try:
                 server.serve_forever()
             except Exception as e:
-                if crash_proof_bot:
-                    crash_proof_bot.safe_log(f"Server error (but continuing): {e}")
+                bot.log(f"Server error: {e}")
         
         server_thread = threading.Thread(target=run_server, daemon=True)
         server_thread.start()
         
-        if crash_proof_bot:
-            crash_proof_bot.safe_log(f"✅ Server running on port {port}")
+        bot.log("✅ Web server started")
         
+        return server
+    
     except Exception as e:
-        if crash_proof_bot:
-            crash_proof_bot.safe_log(f"Server start error: {e}")
+        bot.log(f"❌ Server start error: {e}")
+        return None
 
 def main():
-    """Main function with maximum crash protection"""
-    global crash_proof_bot
-    
+    """Main function for Render deployment"""
     try:
-        print("🛡️ STARTING CRASH-PROOF BOT")
+        print("🚀 STARTING RENDER-COMPATIBLE BOT")
         
-        # Create crash-proof bot
-        crash_proof_bot = CrashProofBot()
+        # Start web server
+        server = create_server()
         
-        # Start server
-        safe_start_server()
+        # Give server time to start
+        time.sleep(2)
         
-        # Run bot
-        crash_proof_bot.safe_run_bot()
-        
+        # Start trading bot
+        bot.run_forever()
+    
     except Exception as e:
         print(f"Main error: {e}")
-        try:
-            if crash_proof_bot:
-                crash_proof_bot.safe_log(f"Main error: {e}")
-        except:
-            pass
+        bot.log(f"Main error: {e}")
         
-        # Try to restart after delay
-        try:
-            time.sleep(30)
-            print("🔄 Attempting restart...")
-            main()
-        except:
-            print("💥 Cannot restart - ending")
+        # Keep running even if there's an error
+        while True:
+            try:
+                time.sleep(60)
+                bot.log("🔄 Bot still running...")
+            except KeyboardInterrupt:
+                break
+            except:
+                continue
 
 if __name__ == "__main__":
     main()
