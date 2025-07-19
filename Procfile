@@ -1,1 +1,1 @@
-web: python main.py
+web: python ai_trading_engine.py
