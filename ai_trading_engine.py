@@ -12,7 +12,6 @@ from sklearn.preprocessing import StandardScaler, MinMaxScaler
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import mean_squared_error, mean_absolute_error
 import yfinance as yf
-import talib
 import warnings
 import logging
 from datetime import datetime, timedelta
@@ -29,7 +28,64 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 class TechnicalIndicators:
-    """Technical analysis indicators calculator"""
+    """Technical analysis indicators calculator - Pure Python implementation"""
+    
+    @staticmethod
+    def sma(data, period):
+        """Simple Moving Average"""
+        return data.rolling(window=period).mean()
+    
+    @staticmethod
+    def ema(data, period):
+        """Exponential Moving Average"""
+        return data.ewm(span=period).mean()
+    
+    @staticmethod
+    def rsi(data, period=14):
+        """Relative Strength Index"""
+        delta = data.diff()
+        gain = (delta.where(delta > 0, 0)).rolling(window=period).mean()
+        loss = (-delta.where(delta < 0, 0)).rolling(window=period).mean()
+        rs = gain / loss
+        return 100 - (100 / (1 + rs))
+    
+    @staticmethod
+    def macd(data, fast=12, slow=26, signal=9):
+        """MACD Indicator"""
+        ema_fast = TechnicalIndicators.ema(data, fast)
+        ema_slow = TechnicalIndicators.ema(data, slow)
+        macd_line = ema_fast - ema_slow
+        signal_line = TechnicalIndicators.ema(macd_line, signal)
+        histogram = macd_line - signal_line
+        return macd_line, signal_line, histogram
+    
+    @staticmethod
+    def bollinger_bands(data, period=20, std_dev=2):
+        """Bollinger Bands"""
+        sma = TechnicalIndicators.sma(data, period)
+        std = data.rolling(window=period).std()
+        upper = sma + (std * std_dev)
+        lower = sma - (std * std_dev)
+        return upper, sma, lower
+    
+    @staticmethod
+    def atr(high, low, close, period=14):
+        """Average True Range"""
+        high_low = high - low
+        high_close = np.abs(high - close.shift())
+        low_close = np.abs(low - close.shift())
+        ranges = pd.concat([high_low, high_close, low_close], axis=1)
+        true_range = ranges.max(axis=1)
+        return true_range.rolling(window=period).mean()
+    
+    @staticmethod
+    def stochastic(high, low, close, k_period=14, d_period=3):
+        """Stochastic Oscillator"""
+        lowest_low = low.rolling(window=k_period).min()
+        highest_high = high.rolling(window=k_period).max()
+        k_percent = 100 * ((close - lowest_low) / (highest_high - lowest_low))
+        d_percent = k_percent.rolling(window=d_period).mean()
+        return k_percent, d_percent
     
     @staticmethod
     def calculate_indicators(df: pd.DataFrame) -> pd.DataFrame:
@@ -37,34 +93,29 @@ class TechnicalIndicators:
         data = df.copy()
         
         # Price-based indicators
-        data['SMA_10'] = talib.SMA(data['Close'], timeperiod=10)
-        data['SMA_20'] = talib.SMA(data['Close'], timeperiod=20)
-        data['SMA_50'] = talib.SMA(data['Close'], timeperiod=50)
-        data['EMA_12'] = talib.EMA(data['Close'], timeperiod=12)
-        data['EMA_26'] = talib.EMA(data['Close'], timeperiod=26)
+        data['SMA_10'] = TechnicalIndicators.sma(data['Close'], 10)
+        data['SMA_20'] = TechnicalIndicators.sma(data['Close'], 20)
+        data['SMA_50'] = TechnicalIndicators.sma(data['Close'], 50)
+        data['EMA_12'] = TechnicalIndicators.ema(data['Close'], 12)
+        data['EMA_26'] = TechnicalIndicators.ema(data['Close'], 26)
         
         # MACD
-        data['MACD'], data['MACD_signal'], data['MACD_hist'] = talib.MACD(data['Close'])
+        data['MACD'], data['MACD_signal'], data['MACD_hist'] = TechnicalIndicators.macd(data['Close'])
         
         # RSI
-        data['RSI'] = talib.RSI(data['Close'], timeperiod=14)
+        data['RSI'] = TechnicalIndicators.rsi(data['Close'])
         
         # Bollinger Bands
-        data['BB_upper'], data['BB_middle'], data['BB_lower'] = talib.BBANDS(data['Close'])
+        data['BB_upper'], data['BB_middle'], data['BB_lower'] = TechnicalIndicators.bollinger_bands(data['Close'])
         
         # Stochastic
-        data['STOCH_K'], data['STOCH_D'] = talib.STOCH(data['High'], data['Low'], data['Close'])
+        data['STOCH_K'], data['STOCH_D'] = TechnicalIndicators.stochastic(data['High'], data['Low'], data['Close'])
         
         # ATR
-        data['ATR'] = talib.ATR(data['High'], data['Low'], data['Close'])
+        data['ATR'] = TechnicalIndicators.atr(data['High'], data['Low'], data['Close'])
         
-        # Volume indicators
-        data['OBV'] = talib.OBV(data['Close'], data['Volume'])
-        data['AD'] = talib.AD(data['High'], data['Low'], data['Close'], data['Volume'])
-        
-        # Price patterns
-        data['DOJI'] = talib.CDLDOJI(data['Open'], data['High'], data['Low'], data['Close'])
-        data['HAMMER'] = talib.CDLHAMMER(data['Open'], data['High'], data['Low'], data['Close'])
+        # Volume indicators (simplified)
+        data['OBV'] = (data['Volume'] * ((data['Close'] - data['Close'].shift(1)) > 0).astype(int)).cumsum()
         
         return data
 
